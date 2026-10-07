@@ -13,8 +13,7 @@ def pca(X_train):
 
 
 def transform(X,pca):
-    return pca.transform(X)     #transform() reduces the dimensionality to the number of components you specified.
-
+    return pca.transform(X)     #transform() reduces the dimensionality to the number of components you specified.Here in this case its 100
 
 
     
