@@ -13,9 +13,18 @@ def fit(X,k):
     eigenvalues,U=np.linalg.eigh(X_centered)    #np.linalg.eigh() returns eigenvalues in ascending order.
                                                 #Its eigenvectors are stored as columns of U.
 
-    index=np.argsort(eigenvalues)[::-1]  
-    eigenvalues=eigenvalues[index]
-    U=U[:,index][:,:k]          #We reorder the columns of U in the same way,
+    
+    # Ignore zero, near-zero and negative eigenvalues
+    tol = (
+        np.finfo(float).eps
+        * max(gram.shape)
+        * np.max(np.abs(eigenvalues))
+    )
+
+    valid = eigenvalues > tol
+
+    eigenvalues = eigenvalues[valid][:k]
+    U = U[:, valid][:, :k]      #We reorder the columns of U in the same way,
                                 #then keep only the first 'k' columns(eigen vector corresponding to largest eigen value)
 
     components=(X_centered.T @ U)/np.sqrt(eigenvalues)
