@@ -1,51 +1,34 @@
 import numpy as np
 
 
-def fit(X,k):
-    """Learn PCA components using the smaller X @ X.T matrix."""
-    X=np.asarray(X,dtype=float)    # Converts the data into numpy arrays and each and every value to floating point number
+def fit(X, k=50):
+    """Fit PCA on faces ``X`` and return a model with ``k`` eigenfaces."""
+    X = np.asarray(X, dtype=np.float64)
+    assert X.ndim == 2
+    assert 0 < k <= X.shape[0]
 
-    mean=np.mean(X,axis=0)          #Mean of each column 
-    X_centered=X-mean               #Centers X
+    mean_face = X.mean(axis=0)
+    X_centered = X - mean_face
 
-    gram=X_centered @ X_centered.T  
+    # Use the number-of-faces Gram matrix instead of the huge pixel matrix.
+    gram = X_centered @ X_centered.T
+    eigenvalues, vectors = np.linalg.eigh(gram)
+    order = np.argsort(eigenvalues)[::-1][:k]
+    vectors = vectors[:, order]
 
-    eigenvalues,U=np.linalg.eigh(X_centered)    #np.linalg.eigh() returns eigenvalues in ascending order.
-                                                #Its eigenvectors are stored as columns of U.
+    eigenfaces = X_centered.T @ vectors
+    eigenfaces /= np.linalg.norm(eigenfaces, axis=0)
 
-    
-    # Ignore zero, near-zero and negative eigenvalues
-    tol = (
-        np.finfo(float).eps
-        * max(gram.shape)
-        * np.max(np.abs(eigenvalues))
-    )
-
-    valid = eigenvalues > tol
-
-    eigenvalues = eigenvalues[valid][:k]
-    U = U[:, valid][:, :k]      #We reorder the columns of U in the same way,
-                                #then keep only the first 'k' columns(eigen vector corresponding to largest eigen value)
-
-    components=(X_centered.T @ U)/np.sqrt(eigenvalues)
-
-    return {"mean":mean,"components":components,"eigenvalues":eigenvalues}
+    return {
+        "mean_face": mean_face,
+        "eigenfaces": eigenfaces,
+        "eigenvalues": eigenvalues[order],
+    }
 
 
-def project(model,face_vec):
-    face_vec=np.asarray(face_vec,dtype=float)
-    centered_face=face_vec-model["mean"]
-    return centered_face @ model["components"]
-
-    
-
-
-
-
-    
-
-
-
-
-
-
+def project(model, face_vec):
+    """Project one face vector onto the model's eigenfaces."""
+    face_vec = np.asarray(face_vec, dtype=np.float64)
+    assert face_vec.ndim == 1
+    assert face_vec.shape[0] == model["mean_face"].shape[0]
+    return (face_vec - model["mean_face"]) @ model["eigenfaces"]

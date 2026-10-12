@@ -1,32 +1,25 @@
 import numpy as np
-from data_prep import get_data
-from eigenfaces import PCA1  # Replace with Surya's actual filename
 
 
-def evaluate_classifier(k=50):
-    """Run nearest-neighbor classification and return the test accuracy."""
-    X_train, X_test, y_train, y_test = get_data()
+def predict(model, train_proj, train_y, face_proj):
+    """Return the nearest training label and Euclidean distance.
 
-    mean = X_train.mean(axis=0)
-    components = PCA1(X_train, k)
+    ``train_proj`` contains projected training faces with shape ``(n, k)``;
+    ``face_proj`` is one already-projected face with shape ``(k,)``.
+    ``model`` is accepted to preserve the project interface, but prediction
+    only needs the projected arrays.
+    """
+    del model
 
-    # Center both sets using the training mean, then project.
-    train_vectors = (X_train - mean) @ components
-    test_vectors = (X_test - mean) @ components
+    train_proj = np.asarray(train_proj, dtype=float)
+    train_y = np.asarray(train_y)
+    face_proj = np.asarray(face_proj, dtype=float)
 
-    predictions = []
+    assert train_proj.ndim == 2
+    assert train_y.ndim == 1 and train_y.shape[0] == train_proj.shape[0]
+    assert face_proj.ndim == 1 and face_proj.shape[0] == train_proj.shape[1]
+    assert train_proj.shape[0] > 0
 
-    for test_vector in test_vectors:
-        distances = np.linalg.norm(train_vectors - test_vector, axis=1)
-        nearest_index = np.argmin(distances)
-        predictions.append(y_train[nearest_index])
-
-    predictions = np.array(predictions)
-    accuracy = np.mean(predictions == y_test)
-
-    print(f"Accuracy with {k} components: {accuracy:.2%}")
-    return accuracy
-
-
-if __name__ == "__main__":
-    evaluate_classifier(k=50)
+    distances = np.linalg.norm(train_proj - face_proj, axis=1)
+    nearest_index = np.argmin(distances)
+    return train_y[nearest_index], distances[nearest_index]

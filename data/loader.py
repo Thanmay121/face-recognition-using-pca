@@ -30,7 +30,7 @@ def load_faces():
             img = cv2.resize(img, (W, H))
             X.append(img.flatten())
             y.append(int(person[1:]))
-    return np.array(X, dtype=np.uint8), np.array(y)
+    return np.array(X, dtype=np.float64), np.array(y, dtype=int)
 
 
 def stratified_split(X, y, test_size=0.2, seed=42):
@@ -52,6 +52,7 @@ def stratified_split(X, y, test_size=0.2, seed=42):
 def build_processed(test_size=0.2, seed=42):
     X, y = load_faces()
     X_train, X_test, y_train, y_test = stratified_split(X, y, test_size, seed)
+    os.makedirs(PROCESSED_DIR, exist_ok=True)
     for name, arr in zip(NAMES, (X_train, X_test, y_train, y_test)):
         np.save(os.path.join(PROCESSED_DIR, f"{name}.npy"), arr)
     print("Saved:", X_train.shape, X_test.shape, y_train.shape, y_test.shape)
@@ -59,7 +60,13 @@ def build_processed(test_size=0.2, seed=42):
 
 def get_data():
     """Surya calls this. Loads from data/processed."""
-    return tuple(np.load(os.path.join(PROCESSED_DIR, f"{n}.npy")) for n in NAMES)
+    files = [os.path.join(PROCESSED_DIR, f"{n}.npy") for n in NAMES]
+    if not all(os.path.exists(path) for path in files):
+        build_processed()
+    arrays = [np.load(path) for path in files]
+    arrays[0] = arrays[0].astype(np.float64)
+    arrays[1] = arrays[1].astype(np.float64)
+    return tuple(arrays)
 
 
 if __name__ == "__main__":
